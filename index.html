@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Online RPG</title>
+  <style>
+  body {background:#0b1622;color:white;text-align:center;font-family:Arial;}
+  .panel {background:#16202d;padding:15px;margin:10px auto;width:300px;border-radius:10px;}
+  button {padding:10px;margin:5px;cursor:pointer;}
+  #chatBox {height:120px;overflow:auto;border:1px solid #444;}
+
+  /* 👇 PUT IT HERE */
+  .hp-container {
+    background: #333;
+    border-radius: 10px;
+    height: 20px;
+    margin: 10px 0;
+    width: 100%;
+    overflow: hidden;
+  }
+
+  #hpBar {
+    background: red;
+    height: 100%;
+    width: 100%;
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+</style>
+}
+  </style>
+</head>
+<body>
+
+<h1>⚔️ Online Boss Fight</h1>
+
+<div class="panel">
+  <h3>🏆 Leaderboard</h3>
+  <ul id="leaderboard"></ul>
+</div>
+
+<div class="panel">
+  👤 <span id="name"></span><br>
+  💰 Coins: <span id="coins">0</span><br>
+  ⚡ Power: <span id="power">5</span><br>
+  ❤️ Boss HP: <span id="hp">100</span><br>
+  <!-- HP BAR -->
+  <div class="hp-container">
+  <div id="hpBar"></div>
+</div>
+
+  <!-- 👇 ADD BUTTON HERE -->
+  <button onclick="attack()">⚔️ Attack</button>
+</div>
+
+<audio id="hit" src="https://www.soundjay.com/button/sounds/button-16.mp3"></audio>
+
+<script src="/socket.io/socket.io.js"></script>
+<script>
+let socket = io();
+let username = prompt("Enter username:");
+document.getElementById("name").innerText = username;
+
+socket.emit("join", username);
+
+function attack(){
+  let dmg = Math.floor(Math.random()*20)+1;
+  socket.emit("attack", dmg);
+  document.getElementById("hit").play();
+}
+socket.on("update",(data)=>{
+  document.getElementById("hp").innerText = data.hp;
+
+  let list = Object.values(data.players).sort((a,b)=>b.damage-a.damage);
+  let html = "";
+  list.forEach(p=>{
+    html += `<li>${p.name}: ${p.damage}</li>`;
+  });
+  document.getElementById("leaderboard").innerHTML = html;
+
+  // 🆕 ADD THIS PART
+  let me = Object.values(data.players).find(p => p.name === username);
+
+  if (me){
+    document.getElementById("coins").innerText = me.coins || 0;
+    document.getElementById("power").innerText = me.power || 1;
+  }
+   // 🆕 ADD THIS PART
+  let percent = (data.hp / 100) * 100;
+document.getElementById("hpBar").style.width = percent + "%";
+});
+
+function send(){
+  let msg = document.getElementById("msg").value;
+  socket.emit("chat", msg);
+  document.getElementById("msg").value = "";
+}
+
+socket.on("chat",(d)=>{
+  let box = document.getElementById("chatBox");
+  box.innerHTML += `<p><b>${d.name}:</b> ${d.message}</p>`;
+  box.scrollTop = box.scrollHeight;
+});
+</script>
+
+</body>
+</html>
